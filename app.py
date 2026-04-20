@@ -1,37 +1,67 @@
 import streamlit as st
 import joblib
 import numpy as np
+import pandas as pd
 
+# 1. Page Setup
+st.set_page_config(page_title="Breast Cancer Diagnosis", layout="wide")
 
+# 2. Load the Model
 @st.cache_resource
 def load_model():
+    # Ensure this matches your uploaded file name
     return joblib.load('breast_cancer_model.pkl')
 
 model = load_model()
 
-st.title("Breast Cancer Prediction (Random Forest)")
-st.write("Enter the clinical measurements to predict diagnosis.")
+st.title("🩺 Breast Cancer Detection System")
+st.write("Provide the 20 clinical measurements below to get a diagnostic prediction.")
 
+# 3. Define your 20 features 
+# REPLACE THESE NAMES with your actual column names from Colab
+feature_names = [
+    "Mean Radius", "Mean Texture", "Mean Perimeter", "Mean Area", "Mean Smoothness",
+    "Mean Compactness", "Mean Concavity", "Mean Concave Points", "Mean Symmetry", "Mean Fractal Dimension",
+    "Radius Error", "Texture Error", "Perimeter Error", "Area Error", "Smoothness Error",
+    "Compactness Error", "Concavity Error", "Concave Points Error", "Symmetry Error", "Fractal Dimension Error"
+]
 
-col1, col2 = st.columns(2)
+# 4. Create UI Input Fields (Organized into 4 columns)
+st.subheader("Input Clinical Parameters")
+inputs = []
+cols = st.columns(4)
 
-with col1:
-    mean_radius = st.slider("Mean Radius", 5.0, 30.0, 15.0)
-    mean_texture = st.slider("Mean Texture", 5.0, 40.0, 20.0)
-    mean_perimeter = st.slider("Mean Perimeter", 40.0, 200.0, 90.0)
+for i, name in enumerate(feature_names):
+    with cols[i % 4]:
+        # You can adjust the min_value, max_value, and value (default) based on your data
+        val = st.number_input(f"{name}", value=0.0, format="%.4f")
+        inputs.append(val)
 
-with col2:
-    mean_area = st.slider("Mean Area", 100.0, 2500.0, 500.0)
-    mean_smoothness = st.slider("Mean Smoothness", 0.05, 0.2, 0.1)
+st.markdown("---")
 
-if st.button("Predict"):
-  
-    features = np.array([[mean_radius, mean_texture, mean_perimeter, mean_area, mean_smoothness]])
+# 5. Prediction Logic
+if st.button("Generate Diagnostic Report", type="primary"):
+    # Convert inputs to a 2D array (1 row, 20 columns)
+    input_array = np.array([inputs])
     
-    prediction = model.predict(features)
+    # Predict
+    prediction = model.predict(input_array)
+    prediction_proba = model.predict_proba(input_array) # Probability of the classes
+
+    # 6. Display Results
+    col_res1, col_res2 = st.columns(2)
     
-    if prediction[0] == 1:
-        st.error("Prediction: Malignant")
-    else:
-        st.success("Prediction: Benign")
- 
+    with col_res1:
+        st.subheader("Result")
+        if prediction[0] == 1:
+            st.error("🚨 Prediction: MALIGNANT")
+        else:
+            st.success("✅ Prediction: BENIGN")
+            
+    with col_res2:
+        st.subheader("Confidence")
+        confidence = prediction_proba[0][prediction[0]]
+        st.write(f"The model is **{confidence:.2%}** confident in this result.")
+
+st.info("**Disclaimer:** This is an AI-assisted tool for educational research. It is not a substitute for professional medical advice.")
+    
